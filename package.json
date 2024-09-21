@@ -1,0 +1,36 @@
+{
+  "name": "daisannome",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "clean": "rimraf dist/",
+    "copy-public": "copyfiles public/* dist/",
+    "copy-entrypoint": "copyfiles index.html dist/",
+    "copy-styles": "copyfiles -u 1 src/styles/* dist/",
+    "remove-empty-exports": "node scripts/removeEmptyExports.js",
+    "copy-all": "yarn copy-public && yarn copy-entrypoint && yarn copy-styles",
+    "build": "yarn clean && yarn copy-all && tsc && yarn remove-empty-exports",
+    "monitor-dist": "nodemon --watch ./dist --exec 'node scripts/test.js'",
+    "dev": "concurrently 'yarn tsc --watch' 'yarn monitor-dist'"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "packageManager": "yarn@4.4.1",
+  "devDependencies": {
+    "@eslint/js": "^9.10.0",
+    "@types/chrome": "^0.0.270",
+    "@types/copyfiles": "^2.4.4",
+    "@types/eslint": "^9.6.1",
+    "chrome-types": "^0.1.306",
+    "concurrently": "^9.0.1",
+    "copyfiles": "^2.4.1",
+    "eslint": "^9.10.0",
+    "globals": "^15.9.0",
+    "nodemon": "^3.1.4",
+    "puppeteer": "^23.3.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.5.0"
+  }
+}

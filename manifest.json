@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Hello Extensions",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "action": {
+    "default_popup": "dist/index.html",
+    "default_icon": {
+      "16": "dist/public/hello_extensions.png",
+      "24": "dist/public/hello_extensions.png",
+      "32": "dist/public/hello_extensions.png"
+    }
+  },
+
+  "content_scripts": [
+    {
+      "all_frames": true,
+      "match_about_blank": true,
+      "matches": ["http://*/*", "https://*/*", "file://*/*"],
+      "js": ["/dist/content/content.js"],
+      "css": ["/dist/styles/styles.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "dist/background/sw.js",
+    "type": "module"
+  },
+
+  "permissions": ["activeTab", "scripting"]
+}
