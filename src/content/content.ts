@@ -39,22 +39,31 @@ class DOMManipulator {
     return nodes;
   }
 
-  markKnownKanji(kanji: string[]) {
+  markKnownKanji(kanji: string[], srsStages: number[]) {
     const nodes = this.getTextNodes();
     loop: for (const node of nodes) {
       for (const [index, char] of node.data.split('').entries()) {
-        if (kanji.includes(char)) {
-          //   console.log(guid);
-          //   console.log(x);
-          this.highlightNode(node, index, char);
-          this.markKnownKanji(kanji);
+        const kanjiIndex = kanji.indexOf(char);
+        if (kanjiIndex >= 0) {
+          this.highlightNode(
+            node,
+            index,
+            kanji[kanjiIndex],
+            srsStages[kanjiIndex]
+          );
+          this.markKnownKanji(kanji, srsStages);
           break loop;
         }
       }
     }
   }
 
-  private highlightNode(node: Text, index: number, char: string) {
+  private highlightNode(
+    node: Text,
+    index: number,
+    char: string,
+    srsStage: number
+  ) {
     const range = document.createRange();
     range.setStart(node, index);
     range.setEnd(node, index + 1);
@@ -63,7 +72,7 @@ class DOMManipulator {
       window.open(`${this.lookupKanjiUrl}/${char}`, '_blank')
     );
     mark.classList.add(this.highlightClassName);
-    mark.classList.add(this.highlightClassName + '--red');
+    mark.classList.add(this.highlightClassName + `--${srsStage.toString()}`);
     range.surroundContents(mark);
   }
 }
@@ -89,13 +98,18 @@ class Runtime {
 
   start(knownKanji: KnownKanji[]) {
     console.log('Started!');
-    const kanji = knownKanji.map((kk) => kk.character);
-    this.domManipulator.markKnownKanji(kanji);
+    const kanji: string[] = [];
+    const srsStages: number[] = [];
+    knownKanji.forEach((kk) => {
+      kanji.push(kk.character);
+      srsStages.push(kk.srs_stage);
+    });
+    this.domManipulator.markKnownKanji(kanji, srsStages);
     this.interval = setInterval(() => {
       const newNodesCount = this.domManipulator.getTextNodes().length;
       if (newNodesCount !== this.nodesCount) {
         this.nodesCount = newNodesCount;
-        this.domManipulator.markKnownKanji(kanji);
+        this.domManipulator.markKnownKanji(kanji, srsStages);
       }
     }, this.timeout);
   }
