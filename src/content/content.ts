@@ -1,60 +1,15 @@
-import { KnownKanji } from 'types.js';
+import type { KnownKanji } from '../types';
 
-class Main {
-  private interval: NodeJS.Timeout | null;
+class DOMManipulator {
+  private readonly unicodeStart = 11904;
+  private readonly unicodeEnd = 40959;
+  private readonly highlightClassName = 'dsnm-highlight';
+  private readonly lookupKanjiUrl = 'https://www.wanikani.com/kanji';
 
-  constructor() {
-    this.interval = null;
-  }
+  constructor() {}
 
-  public init(knownKanji: KnownKanji[]) {
-    console.log('Started!');
-    const kanji = knownKanji.map((kk) => kk.character);
-    this.interval = setInterval(() => this.action(kanji), 2000);
-  }
-
-  private action(kanji: string[]) {
-    const guid = crypto.randomUUID();
-
-    const textNodes: Text[] = this.walkOver();
-
-    console.log('length', textNodes.length);
-    console.log(textNodes);
-
-    // textNodes.forEach((x) => console.log(x.data, x.parentElement));
-
-    loop: for (const x of textNodes) {
-      for (const [index, y] of x.data.split('').entries()) {
-        if (kanji.includes(y)) {
-          console.log(guid);
-          const range = document.createRange();
-          console.log(x);
-          range.setStart(x, index);
-          range.setEnd(x, index + 1);
-          const mark = document.createElement('span');
-          mark.classList.add('dsnm-highlight');
-          range.surroundContents(mark);
-          this.action(kanji);
-          break loop;
-        }
-      }
-    }
-
-    // console.log(ranges);
-    // ranges.forEach(({ node, start }) => {
-    //   console.log('===');
-    //   console.log(start);
-    //   console.log(node.textContent);
-    //   const rangeDOM = document.createRange();
-    //   rangeDOM.setStart(node, start);
-    //   rangeDOM.setEnd(node, start + 1);
-    //   const mark = document.createElement('mark');
-    //   rangeDOM.surroundContents(mark);
-    // });
-  }
-
-  private walkOver = () => {
-    const arr = [];
+  getTextNodes() {
+    const nodes = [];
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT
@@ -64,54 +19,119 @@ class Main {
       const node = walker.currentNode as Text;
       if (
         node.nodeType === Node.TEXT_NODE &&
-        !node.parentElement?.classList.contains('dsnm-highlight') &&
-        !node.nextElementSibling?.classList.contains('dsnm-highlight')
+        !node.parentElement?.classList.contains(this.highlightClassName) &&
+        !node.nextElementSibling?.classList.contains(this.highlightClassName)
       ) {
-        // or 11904
-        // 19968 to 40959
         if (
-          node.data.split('').some((x) => {
-            const y = x.codePointAt(0);
-            return y && y > 11904 && y < 40959;
+          node.data.split('').some((char) => {
+            const codePoint = char.codePointAt(0);
+            return (
+              codePoint &&
+              codePoint > this.unicodeStart &&
+              codePoint < this.unicodeEnd
+            );
           })
         ) {
-          arr.push(node as Text);
+          nodes.push(node as Text);
         }
       }
     }
-    return arr;
-  };
+    return nodes;
+  }
+
+  markKnownKanji(kanji: string[]) {
+    const nodes = this.getTextNodes();
+    loop: for (const node of nodes) {
+      for (const [index, char] of node.data.split('').entries()) {
+        if (kanji.includes(char)) {
+          //   console.log(guid);
+          //   console.log(x);
+          this.highlightNode(node, index, char);
+          this.markKnownKanji(kanji);
+          break loop;
+        }
+      }
+    }
+  }
+
+  private highlightNode(node: Text, index: number, char: string) {
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + 1);
+    const mark = document.createElement('span');
+    mark.addEventListener('click', () =>
+      window.open(`${this.lookupKanjiUrl}/${char}`, '_blank')
+    );
+    mark.classList.add(this.highlightClassName);
+    mark.classList.add(this.highlightClassName + '--red');
+    range.surroundContents(mark);
+  }
 }
 
-const main = new Main();
-// chrome.runtime.onMessage.addListener(function (request) {
-//   console.log(request);
-//   if (request.command === 'data-ready') {
-//     console.log('xd');
-//   }
-//   // VERY IMPORTANT
-//   return true;
-// });
+class Runtime {
+  private domManipulator: DOMManipulator;
+  private port: chrome.runtime.Port;
+  private nodesCount: number;
+  private interval: ReturnType<typeof setInterval> | null;
+  private timeout: number = 1000;
 
-// (async () => {
-//   const x = await chrome.runtime.sendMessage({ greeting: 'hello' });
-//   console.log(x);
-// })();
+  constructor() {
+    this.domManipulator = new DOMManipulator();
+    this.port = chrome.runtime.connect({ name: 'message-channel' });
+    this.nodesCount = 0;
+    this.interval = null;
+    this.registerListeners();
+  }
 
-// const port = chrome.runtime.connect({ name: 'knockknock' });
-// port.postMessage({ joke: 'Knock knock' });
-// port.onMessage.addListener(async (msg) => {
-//   if (msg.question === 'xxx') console.log(msg.data);
-// });
+  init() {
+    this.port.postMessage({ command: 'get-data' });
+  }
 
-const port = chrome.runtime.connect({ name: 'message-channel' });
-window.addEventListener('load', () => {
-  console.log('1');
-  port.postMessage({ command: 'get-data' });
-  port.onMessage.addListener((msg) => {
-    console.log('2');
-    if (msg.command === 'data-ready') {
-      main.init(msg.data);
+  start(knownKanji: KnownKanji[]) {
+    console.log('Started!');
+    const kanji = knownKanji.map((kk) => kk.character);
+    this.domManipulator.markKnownKanji(kanji);
+    this.interval = setInterval(() => {
+      const newNodesCount = this.domManipulator.getTextNodes().length;
+      if (newNodesCount !== this.nodesCount) {
+        this.nodesCount = newNodesCount;
+        this.domManipulator.markKnownKanji(kanji);
+      }
+    }, this.timeout);
+  }
+
+  stop() {
+    console.log('Stoped!');
+    if (this.interval) {
+      clearInterval(this.interval);
     }
-  });
+  }
+
+  private registerListeners() {
+    chrome.runtime.onMessage.addListener((msg) => {
+      console.log(msg);
+      if (msg.command === 'start') {
+        this.start(msg.data);
+      }
+      if (msg.command === 'stop') {
+        this.stop();
+      }
+    });
+    this.port.onMessage.addListener((msg) => {
+      console.log('Got messasge from SW');
+      if (msg.command === 'data-ready') {
+        chrome.storage.sync.get('state', ({ state }) => {
+          if (state) {
+            this.start(msg.data);
+          }
+        });
+      }
+    });
+  }
+}
+
+window.addEventListener('load', () => {
+  console.log('Window loaded');
+  const runtime = new Runtime();
+  runtime.init();
 });

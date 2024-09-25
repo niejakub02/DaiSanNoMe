@@ -3,6 +3,7 @@
   "name": "Hello Extensions",
   "description": "Base Level Extension",
   "version": "1.0",
+  "options_page": "/dist/settings/settings.html",
   "action": {
     "default_popup": "dist/index.html",
     "default_icon": {
@@ -26,5 +27,5 @@
     "type": "module"
   },
 
-  "permissions": ["activeTab", "scripting"]
+  "permissions": ["activeTab", "scripting", "storage"]
 }
