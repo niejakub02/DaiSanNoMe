@@ -59,9 +59,12 @@ export class Program {
 
     chrome.runtime.onMessage.addListener((request) => {
       console.log('recevied message');
-      if (request.command === 'clear-storage') {
-        console.log('clear');
+      if (request.command === 'refresh-token') {
+        console.log('refresh');
+        this.httpClient.clearHeaders();
         this.httpClient.clearStorage();
+        this.httpClient.init();
+        this.init();
       }
       // to be aync
       return true;

@@ -10,6 +10,7 @@ class DOMManipulator {
 
   getTextNodes() {
     const nodes = [];
+    const that = this;
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
@@ -18,10 +19,10 @@ class DOMManipulator {
           if (
             node.nodeType === Node.TEXT_NODE &&
             !(node as Text).parentElement?.classList.contains(
-              'dsnm-highlight'
+              that.highlightClassName
             ) &&
             !(node as Text).nextElementSibling?.classList.contains(
-              'dsnm-highlight'
+              that.highlightClassName
             )
           ) {
             return NodeFilter.FILTER_ACCEPT;
@@ -86,9 +87,11 @@ class DOMManipulator {
     range.setStart(node, index);
     range.setEnd(node, index + 1);
     const mark = document.createElement('span');
-    mark.addEventListener('click', () =>
-      window.open(`${this.lookupKanjiUrl}/${char}`, '_blank')
-    );
+    mark.addEventListener('click', () => {
+      if (document.body.hasAttribute('data-dsnm-on')) {
+        window.open(`${this.lookupKanjiUrl}/${char}`, '_blank');
+      }
+    });
     mark.classList.add(this.highlightClassName);
     mark.classList.add(this.highlightClassName + `--${srsStage.toString()}`);
     range.surroundContents(mark);

@@ -41,18 +41,16 @@ const restoreOptions = () => {
         ) as HTMLSelectElement
       ).value = value as string;
     });
-    console.log(data);
-    // const select = document.querySelector('#color') as HTMLSelectElement;
-    // select.value = data.selectedColor;
   });
 };
 
 const updateToken = () => {
   const value = (document.querySelector('#token input') as HTMLInputElement)
     .value;
-  chrome.storage.sync.set({ token: value }, () => {
-    console.log('saved');
-  });
+  chrome.storage.sync.set({ token: value });
+  if (value.length) {
+    chrome.storage.sync.set({ warning: '' });
+  }
 };
 
 generate();

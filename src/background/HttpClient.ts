@@ -1,5 +1,4 @@
 import { ApiStorage } from './ApiStorage.js';
-import { TOKEN } from './../lib/constants.js';
 
 export class HttpClient {
   private httpHeaders: Headers;
@@ -11,8 +10,19 @@ export class HttpClient {
     this.init();
   }
 
-  private init() {
-    this.httpHeaders.append('Authorization', `Bearer ${TOKEN}`);
+  init() {
+    chrome.storage.sync.get(null, (data) => {
+      console.log(data);
+      if (data.token) {
+        this.httpHeaders.append('Authorization', `Bearer ${data.token}`);
+        chrome.storage.sync.set({ warning: '' });
+      } else {
+        chrome.storage.sync.set({
+          warning:
+            'To make the extension work, please insert your WaniKani token in the extension settings first!',
+        });
+      }
+    });
   }
 
   async get(url: string) {
@@ -36,5 +46,9 @@ export class HttpClient {
 
   clearStorage(url?: string) {
     this.storage.clear(url);
+  }
+
+  clearHeaders() {
+    this.httpHeaders.delete('Authorization');
   }
 }

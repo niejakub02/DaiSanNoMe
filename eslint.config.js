@@ -10,6 +10,7 @@ export default [
     rules: {
       'no-unused-vars': 'warn',
       '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-this-alias': 'off',
     },
   },
   {
