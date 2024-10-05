@@ -12,28 +12,37 @@ class DOMManipulator {
     const nodes = [];
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (
+            node.nodeType === Node.TEXT_NODE &&
+            !(node as Text).parentElement?.classList.contains(
+              'dsnm-highlight'
+            ) &&
+            !(node as Text).nextElementSibling?.classList.contains(
+              'dsnm-highlight'
+            )
+          ) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_REJECT;
+        },
+      }
     );
-
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
       if (
-        node.nodeType === Node.TEXT_NODE &&
-        !node.parentElement?.classList.contains(this.highlightClassName) &&
-        !node.nextElementSibling?.classList.contains(this.highlightClassName)
+        node.data.split('').some((char) => {
+          const codePoint = char.codePointAt(0);
+          return (
+            codePoint &&
+            codePoint > this.unicodeStart &&
+            codePoint < this.unicodeEnd
+          );
+        })
       ) {
-        if (
-          node.data.split('').some((char) => {
-            const codePoint = char.codePointAt(0);
-            return (
-              codePoint &&
-              codePoint > this.unicodeStart &&
-              codePoint < this.unicodeEnd
-            );
-          })
-        ) {
-          nodes.push(node as Text);
-        }
+        nodes.push(node as Text);
       }
     }
     return nodes;
@@ -55,6 +64,15 @@ class DOMManipulator {
           break loop;
         }
       }
+    }
+  }
+
+  editBodyAttribute(qualifiedName: string, value?: string) {
+    const body = document.querySelector('body');
+    if (body && value !== undefined) {
+      body.setAttribute(qualifiedName, value);
+    } else {
+      body?.removeAttribute(qualifiedName);
     }
   }
 
@@ -83,6 +101,7 @@ class Runtime {
   private nodesCount: number;
   private interval: ReturnType<typeof setInterval> | null;
   private timeout: number = 1000;
+  private knownKanji: KnownKanji[] = [];
 
   constructor() {
     this.domManipulator = new DOMManipulator();
@@ -96,11 +115,12 @@ class Runtime {
     this.port.postMessage({ command: 'get-data' });
   }
 
-  start(knownKanji: KnownKanji[]) {
+  start() {
     console.log('Started!');
     const kanji: string[] = [];
     const srsStages: number[] = [];
-    knownKanji.forEach((kk) => {
+    this.domManipulator.editBodyAttribute('data-dsnm-on', '');
+    this.knownKanji.forEach((kk) => {
       kanji.push(kk.character);
       srsStages.push(kk.srs_stage);
     });
@@ -116,6 +136,7 @@ class Runtime {
 
   stop() {
     console.log('Stoped!');
+    this.domManipulator.editBodyAttribute('data-dsnm-on');
     if (this.interval) {
       clearInterval(this.interval);
     }
@@ -125,7 +146,7 @@ class Runtime {
     chrome.runtime.onMessage.addListener((msg) => {
       console.log(msg);
       if (msg.command === 'start') {
-        this.start(msg.data);
+        this.start();
       }
       if (msg.command === 'stop') {
         this.stop();
@@ -134,9 +155,10 @@ class Runtime {
     this.port.onMessage.addListener((msg) => {
       console.log('Got messasge from SW');
       if (msg.command === 'data-ready') {
-        chrome.storage.sync.get('state', ({ state }) => {
-          if (state) {
-            this.start(msg.data);
+        this.knownKanji = msg.data;
+        chrome.storage.sync.get('running', ({ running }) => {
+          if (running) {
+            this.start();
           }
         });
       }
@@ -144,8 +166,6 @@ class Runtime {
   }
 }
 
-window.addEventListener('load', () => {
-  console.log('Window loaded');
-  const runtime = new Runtime();
-  runtime.init();
-});
+console.log('Window loaded');
+const runtime = new Runtime();
+runtime.init();

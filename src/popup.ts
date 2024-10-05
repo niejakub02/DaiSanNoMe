@@ -1,17 +1,24 @@
 const checkbox = document.querySelector('input') as HTMLInputElement;
-chrome.storage.sync.get('state', ({ state }) => {
-  checkbox.checked = state;
+chrome.storage.sync.get('running', ({ running }) => {
+  checkbox.checked = running;
 });
 
 checkbox.addEventListener('click', async (ev: MouseEvent) => {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  if (!tab?.id) return;
   const target = ev.target as HTMLInputElement;
-  chrome.storage.sync.set({ state: target.checked });
-  chrome.tabs.sendMessage(tab.id, {
+  chrome.storage.sync.set({ running: target.checked });
+  await sendMessage({
     command: target.checked ? 'start' : 'stop',
   });
 });
+
+const sendMessage = async (message: string | object) => {
+  const tabs = await chrome.tabs.query({
+    currentWindow: true,
+  });
+
+  tabs.forEach((tab) => {
+    if (tab.id) {
+      chrome.tabs.sendMessage(tab.id, message);
+    }
+  });
+};

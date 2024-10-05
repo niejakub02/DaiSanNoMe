@@ -31,6 +31,8 @@ const saveOptions = () => {
 
 const restoreOptions = () => {
   chrome.storage.sync.get(null, (data) => {
+    (document.querySelector('#token input') as HTMLInputElement).value =
+      data.token ?? '';
     Object.entries(data.colors).forEach((entry) => {
       const [key, value] = entry;
       (
@@ -45,8 +47,17 @@ const restoreOptions = () => {
   });
 };
 
+const updateToken = () => {
+  const value = (document.querySelector('#token input') as HTMLInputElement)
+    .value;
+  chrome.storage.sync.set({ token: value }, () => {
+    console.log('saved');
+  });
+};
+
 generate();
 document.addEventListener('DOMContentLoaded', restoreOptions);
 document
   .querySelectorAll('#colors select')
   .forEach((x) => x.addEventListener('change', saveOptions));
+document.querySelector('#token button')?.addEventListener('click', updateToken);

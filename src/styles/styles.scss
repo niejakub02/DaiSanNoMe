@@ -1,34 +1,41 @@
-.dsnm-highlight {
-  background-color: lightyellow;
-  font-weight: bolder;
-  color: #ffffff;
-  cursor: help;
+body[data-dsnm-on] {
+  .dsnm-highlight {
+    background-color: lightyellow;
+    font-weight: bolder;
+    color: #ffffff;
+    cursor: help;
+    transition: opacity 200ms ease-in-out;
 
-  &--0 {
-    background-color: #00604c;
-  }
+    &:hover {
+      opacity: 0.75;
+    }
 
-  &--1,
-  &--2,
-  &--3 {
-    background-color: #ff0095;
-  }
+    &--0 {
+      background-color: #00604c;
+    }
 
-  &--4,
-  &--5,
-  &--6 {
-    background-color: #752689;
-  }
+    &--1,
+    &--2,
+    &--3 {
+      background-color: #ff0095;
+    }
 
-  &--7 {
-    background-color: #253da6;
-  }
+    &--4,
+    &--5,
+    &--6 {
+      background-color: #752689;
+    }
 
-  &--8 {
-    background-color: #1372b0;
-  }
+    &--7 {
+      background-color: #253da6;
+    }
 
-  &--9 {
-    background-color: #303436;
+    &--8 {
+      background-color: #1372b0;
+    }
+
+    &--9 {
+      background-color: #303436;
+    }
   }
 }
